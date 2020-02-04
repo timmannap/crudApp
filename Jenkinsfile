@@ -1,7 +1,7 @@
 node {
     
     stage('git url'){
-     git credentialsId: 'githubnew', url: 'https://github.com/bvramanan/spring-boot-mongo-docker.git'   
+    git credentialsId: 'githubnew', url: 'https://github.com/bvramanan/crudApp.git'  
     }
     
     stage(" Maven Clean Package"){
