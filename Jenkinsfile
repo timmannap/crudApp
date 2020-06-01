@@ -6,7 +6,7 @@
         // This can be http or https
         NEXUS_PROTOCOL = "http"
         // Where your Nexus is running. 'nexus-3' is defined in the docker-compose file
-        NEXUS_URL = "http://3.22.233.114:8088"
+        NEXUS_URL = "http://13.126.17.100/8081"
         // Jenkins credential id to authenticate to Nexus OSS
         NEXUS_CREDENTIAL_ID = "	nexuscreds"
     }
