@@ -45,9 +45,9 @@
                     
                     pomversion = sh(returnStdout: true,script:"sed -n '/<project>/,/<\\/poject>/p' cruApp/pom.xml| sed -ne '/<version>/p'|sed -e 's/<version>//' -e 's/<\\/version>//'").toString().trim()
                     
-                    pom = readMavenPom file: "crudApp/pom.xml";
+                    pom = readMavenPom file: "pom.xml";
                     // Find built artifact under target folder
-                    filesByGlob = findFiles(glob: "gameoflife-web/target/*.${pom.packaging}");
+                    filesByGlob = findFiles(glob: "crudApp/target/*.${pom.packaging}");
                     // Print some info from the artifact found
                     echo "${filesByGlob[0].name} ${filesByGlob[0].path} ${filesByGlob[0].directory} ${filesByGlob[0].length} ${filesByGlob[0].lastModified}"
                     // Extract the path from the File found
