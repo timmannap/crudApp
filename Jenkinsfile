@@ -1,3 +1,11 @@
+pipeline {
+
+    agent any
+
+    tools {
+        
+        maven "maven"
+    }
 
     environment {
 		
@@ -96,4 +104,4 @@
             cleanWs()
         }
     }
-
+}
