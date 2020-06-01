@@ -15,7 +15,7 @@
 		stage("nexusrep") {
             steps {
                 script {
-                    if (env.BRANCH_NAME == 'develop'){
+                    if (env.BRANCH_NAME == 'dev'){
                       NEXUS_REPOSITORY = 'dev'
                     }else if (env.BRANCH_NAME == 'release'){
                       NEXUS_REPOSITORY = 'qa'
