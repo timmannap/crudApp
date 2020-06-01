@@ -43,7 +43,7 @@
                 script {
                     // Read POM xml file using 'readMavenPom' step , this step 'readMavenPom' is included in: https://plugins.jenkins.io/pipeline-utility-steps
                     
-                    pomversion = sh(returnStdout: true,script:"sed -n '/<parent>/,/<\\/parent>/p' cruApp/pom.xml| sed -ne '/<version>/p'|sed -e 's/<version>//' -e 's/<\\/version>//'").toString().trim()
+                    pomversion = sh(returnStdout: true,script:"sed -n '/<project>/,/<\\/poject>/p' cruApp/pom.xml| sed -ne '/<version>/p'|sed -e 's/<version>//' -e 's/<\\/version>//'").toString().trim()
                     
                     pom = readMavenPom file: "crudApp/pom.xml";
                     // Find built artifact under target folder
