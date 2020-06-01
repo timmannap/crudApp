@@ -1,21 +1,12 @@
-pipeline {
-
-    agent any
-
-    tools {
-        
-        maven "maven"
-    }
-
-    environment {
+environment {
 		
         // This can be nexus3 or nexus2
         NEXUS_VERSION = "nexus3"
         // This can be http or https
         NEXUS_PROTOCOL = "http"
         // Where your Nexus is running. 'nexus-3' is defined in the docker-compose file
-        NEXUS_URL = "http://3.22.233.114:8088"
-        // Jenkins credential id to authenticate to Nexus OSS
+        NEXUS_URL = "http://13.126.17.100/8081"
+        // Jenkins credential id to authenticate to Nexus OSS 
         NEXUS_CREDENTIAL_ID = "	nexuscreds"
     }
 
@@ -23,7 +14,7 @@ pipeline {
 		stage("nexusrep") {
             steps {
                 script {
-                    if (env.BRANCH_NAME == 'dev'){
+                    if (env.BRANCH_NAME == 'develop'){
                       NEXUS_REPOSITORY = 'dev'
                     }else if (env.BRANCH_NAME == 'release'){
                       NEXUS_REPOSITORY = 'qa'
@@ -51,7 +42,7 @@ pipeline {
                 script {
                     // Read POM xml file using 'readMavenPom' step , this step 'readMavenPom' is included in: https://plugins.jenkins.io/pipeline-utility-steps
                     
-                    pomversion = sh(returnStdout: true,script:"sed -n '/<project>/,/<\\/project>/p' pom.xml| sed -ne '/<version>/p'|sed -e 's/<version>//' -e 's/<\\/version>//'").toString().trim()
+                    pomversion = sh(returnStdout: true,script:"sed -n '/<project>/,/<\\/poject>/p' cruApp/pom.xml| sed -ne '/<version>/p'|sed -e 's/<version>//' -e 's/<\\/version>//'").toString().trim()
                     
                     pom = readMavenPom file: "pom.xml";
                     // Find built artifact under target folder
