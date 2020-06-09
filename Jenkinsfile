@@ -1,107 +1,51 @@
-pipeline {
+node{
+    echo "${workspace}"
+    echo "${env.BRANCH_NAME}"
+    echo "${env.TAG_NAME}"
+    echo "${env.JOB_NAME}"
 
-    agent any
-
-    tools {
-        
-        maven "maven"
-    }
-
-    environment {
+    
+    stage("clone"){
+	tag = env.TAG_NAME
+	    echo "${tag}"
+	    if (tag == null){
+            	git branch: env.BRANCH_NAME, url: '$github_url'
+	    }
+	    else{
+		    //git branch: env.TAG_NAME, url: '$github_url'
+	    	git '$github_url'
+	    	sh "git checkout tags/${tag}"
+	    }
 		
-        // This can be nexus3 or nexus2
-        NEXUS_VERSION = "nexus3"
-        // This can be http or https
-        NEXUS_PROTOCOL = "http"
-        // Where your Nexus is running. 'nexus-3' is defined in the docker-compose file
-        NEXUS_URL = "http://3.22.233.114:8088"
-        // Jenkins credential id to authenticate to Nexus OSS
-        NEXUS_CREDENTIAL_ID = "	nexuscreds"
     }
-
-    stages {
-		stage("nexusrep") {
-            steps {
-                script {
-                    if (env.BRANCH_NAME == 'dev'){
-                      NEXUS_REPOSITORY = 'dev'
-                    }else if (env.BRANCH_NAME == 'release'){
-                      NEXUS_REPOSITORY = 'qa'
-                    }else if (env.BRANCH_NAME == 'master'){
-                      NEXUS_REPOSITORY = 'stage'
-                    }else if (env.TAG_NAME != 'null'){
-                      NEXUS_REPOSITORY = 'prod'
-                    }
-                }
-            }
-        }
-
-        stage("mvn build") {
-            steps {
-                script {
-                    // If you are using Windows then you should use "bat" step
-                    // Since unit testing is out of the scope we skip them
-                    sh "mvn package"
-                }
-            }
-        }
-
-        stage("publish to nexus") {
-            steps {
-                script {
-                    // Read POM xml file using 'readMavenPom' step , this step 'readMavenPom' is included in: https://plugins.jenkins.io/pipeline-utility-steps
-                    
-                    pomversion = sh(returnStdout: true,script:"sed -n '/<project>/,/<\\/project>/p' pom.xml| sed -ne '/<version>/p'|sed -e 's/<version>//' -e 's/<\\/version>//'").toString().trim()
-                    
-                    pom = readMavenPom file: "pom.xml";
-                    // Find built artifact under target folder
-                    filesByGlob = findFiles(glob: "crudApp/target/*.${pom.packaging}");
-                    // Print some info from the artifact found
-                    echo "${filesByGlob[0].name} ${filesByGlob[0].path} ${filesByGlob[0].directory} ${filesByGlob[0].length} ${filesByGlob[0].lastModified}"
-                    // Extract the path from the File found
-                    artifactPath = filesByGlob[0].path;
-                    // Assign to a boolean response verifying If the artifact name exists
-                    artifactExists = fileExists artifactPath;
-                    
-                    if(artifactExists) {
-                        echo "*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version}";
-                        
-                        nexusArtifactUploader(
-                            nexusVersion: NEXUS_VERSION,
-                            protocol: NEXUS_PROTOCOL,
-                            nexusUrl: NEXUS_URL,
-                            groupId: pom.groupId,
-                            version: pom.version,
-                            repository: NEXUS_REPOSITORY,
-                            credentialsId: NEXUS_CREDENTIAL_ID,
-                            artifacts: [
-                                // Artifact generated such as .jar, .ear and .war files.
-                                [artifactId: pom.artifactId,
-                                classifier: '',
-                                file: artifactPath,
-                                type: pom.packaging]
-                                ]
-                        );
-
-                    } else {
-                        error "*** File: ${artifactPath}, could not be found";
-                    }
-                }
-            }
-        }
-        stage("DeployToTomcat") {
-            steps {
-                script {
-                    // If you are using Windows then you should use "bat" step
-                    // Since unit testing is out of the scope we skip them
-                  sh "ansible-playbook -e env=${NEXUS_REPOSITORY} deploy.yaml"
-                }
-            }
-        }
+     stage("build"){
+        def mavenHome = tool name: "maven", type: "maven" 
+        def mavenCMD = "${mavenHome}/bin/mvn " 
+        sh "${mavenCMD} clean package"
     }
-	post { 
-        always { 
-            cleanWs()
-        }
+	//
+    stage("deploy"){
+        def pom = readMavenPom file: 'pom.xml'
+        filesByGlob = findFiles(glob: "target/*.${pom.packaging}");
+	artifactPath = filesByGlob[0].path;
+        echo "Path: ${artifactPath}"
+	switch(env.BRANCH_NAME){
+		case "develop":
+			nexusArtifactUploader artifacts: [[artifactId: pom.artifactId, classifier: '', file: artifactPath, type: pom.packaging]], credentialsId: 'nexuscreds', groupId: pom.groupId, nexusUrl: '$nexus_url', nexusVersion: 'nexus3', protocol: 'http', repository: 'dev', version: pom.version
+		        sh "ansible-playbook -e env=dev -e artifact=${pom.artifactId} -e packaging=${pom.packaging} deploy.yaml"
+			break
+		case "release":
+			nexusArtifactUploader artifacts: [[artifactId: pom.artifactId, classifier: '', file: artifactPath, type: pom.packaging]], credentialsId: 'nexuscreds', groupId: pom.groupId, nexusUrl: '$nexus_url', nexusVersion: 'nexus3', protocol: 'http', repository: 'qa', version: pom.version
+			sh "ansible-playbook -e env=qa -e artifact=${pom.artifactId} -e packaging=${pom.packaging} deploy.yaml"
+			break
+		case "master":
+			nexusArtifactUploader artifacts: [[artifactId: pom.artifactId, classifier: '', file: artifactPath, type: pom.packaging]], credentialsId: 'nexuscreds', groupId: pom.groupId, nexusUrl: '$nexus_url', nexusVersion: 'nexus3', protocol: 'http', repository: 'uat', version: pom.version
+		        sh "ansible-playbook -e env=stage -e artifact=${pom.artifactId} -e packaging=${pom.packaging} deploy.yaml"
+			break
+		default:
+			nexusArtifactUploader artifacts: [[artifactId: pom.artifactId, classifier: '', file: artifactPath, type: pom.packaging]], credentialsId: 'nexuscreds', groupId: pom.groupId, nexusUrl: '$nexus_url', nexusVersion: 'nexus3', protocol: 'http', repository: 'prod', version: pom.version
+		        sh "ansible-playbook -e env=prod -e artifact=${pom.artifactId} -e packaging=${pom.packaging} deploy.yaml"
+			break
+	}
     }
 }
